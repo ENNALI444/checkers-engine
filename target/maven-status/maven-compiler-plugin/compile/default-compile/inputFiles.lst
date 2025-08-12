@@ -1,0 +1,14 @@
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/api/MoveRequest.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/model/Square.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/model/Board.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/engine/AIPlayer.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/model/GameResult.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/model/Piece.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/model/Color.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/engine/RulesEngine.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/CheckersApplication.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/core/GameService.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/core/Game.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/model/Move.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/api/GameController.java
+/Users/soufiane.ennali/checkers-engine/src/main/java/com/example/checkers/api/BoardResponse.java

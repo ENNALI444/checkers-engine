@@ -1,0 +1,15 @@
+com/example/checkers/model/Board.class
+com/example/checkers/engine/RulesEngine.class
+com/example/checkers/api/BoardResponse.class
+com/example/checkers/model/Piece.class
+com/example/checkers/core/GameService.class
+com/example/checkers/model/Square.class
+com/example/checkers/model/Color.class
+com/example/checkers/model/GameResult.class
+com/example/checkers/model/Move.class
+com/example/checkers/api/MoveRequest.class
+com/example/checkers/api/MoveRequest$Point.class
+com/example/checkers/CheckersApplication.class
+com/example/checkers/core/Game.class
+com/example/checkers/api/GameController.class
+com/example/checkers/engine/AIPlayer.class
