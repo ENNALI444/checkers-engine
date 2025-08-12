@@ -1,0 +1,503 @@
+{
+  "info": {
+    "name": "Checkers Game API",
+    "description": "Complete Postman collection for testing the Checkers Game API. Includes all endpoints with example data and test scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "checkers-api-collection-001"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create New Game (vs AI)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/games",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games"]
+        },
+        "description": "Creates a new checkers game against the AI. You play as RED, AI plays as BLACK. AI automatically responds to your moves."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test response status",
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Test response structure",
+              "pm.test('Response has required fields', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('gameId');",
+              "    pm.expect(json).to.have.property('turn');",
+              "    pm.expect(json).to.have.property('ascii');",
+              "    pm.expect(json).to.have.property('board');",
+              "});",
+              "",
+              "// Test game ID is not empty",
+              "pm.test('Game ID is not empty', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.gameId).to.be.a('string').that.is.not.empty;",
+              "});",
+              "",
+              "// Test turn is RED at start (human player)",
+              "pm.test('Turn is RED at start', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.turn).to.eql('RED');",
+              "});",
+              "",
+              "// Store game ID for other requests",
+              "if (pm.response.json().gameId) {",
+              "    pm.collectionVariables.set('gameId', pm.response.json().gameId);",
+              "    console.log('Game ID stored:', pm.collectionVariables.get('gameId'));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get Board (JSON)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/board?format=json",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "board"],
+          "query": [
+            {
+              "key": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "description": "Gets the current board state in JSON format. Useful for programmatic access."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response is JSON', function () {",
+              "    pm.response.to.be.json;",
+              "});",
+              "",
+              "pm.test('Board has correct structure', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('board');",
+              "    pm.expect(json).to.have.property('turn');",
+              "    pm.expect(json.board).to.be.an('array').with.length(8);",
+              "    pm.expect(json.board[0]).to.be.an('array').with.length(8);",
+              "});",
+              "",
+              "pm.test('Turn is valid', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.turn).to.be.oneOf(['RED', 'BLACK']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Get Board (ASCII)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "text/plain"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/board?format=ascii",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "board"],
+          "query": [
+            {
+              "key": "format",
+              "value": "ascii"
+            }
+          ]
+        },
+        "description": "Gets the current board state in ASCII format for human-readable visualization."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response is text', function () {",
+              "    pm.response.to.be.text;",
+              "});",
+              "",
+              "pm.test('Contains board representation', function () {",
+              "    const text = pm.response.text();",
+              "    pm.expect(text).to.include('Turn:');",
+              "    pm.expect(text).to.include('.');",
+              "    pm.expect(text).to.include('r');",
+              "    pm.expect(text).to.include('b');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Get Legal Moves",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/moves",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "moves"]
+        },
+        "description": "Gets all legal moves for the current player. Essential for understanding what moves are available."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has legal moves', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('legalMoves');",
+              "    pm.expect(json).to.have.property('turn');",
+              "    pm.expect(json).to.have.property('gameResult');",
+              "    pm.expect(json.legalMoves).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Game result is valid', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.gameResult).to.be.oneOf(['ONGOING', 'RED_WIN', 'BLACK_WIN', 'DRAW']);",
+              "});",
+              "",
+              "pm.test('Legal moves have correct structure', function () {",
+              "    const json = pm.response.json();",
+              "    if (json.legalMoves.length > 0) {",
+              "        const move = json.legalMoves[0];",
+              "        pm.expect(move).to.have.property('path');",
+              "        pm.expect(move.path).to.be.an('array').with.length.at.least(2);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Make Move - RED Opening",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"path\": [\n    {\"row\": 5, \"col\": 1},\n    {\"row\": 4, \"col\": 0}\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/move",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "move"]
+        },
+        "description": "Makes a standard opening move for RED: (5,1) → (4,0). This is a legal diagonal move."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Move was applied', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('move');",
+              "    pm.expect(json).to.have.property('turn');",
+              "    pm.expect(json).to.have.property('gameResult');",
+              "    pm.expect(json).to.have.property('ascii');",
+              "    pm.expect(json).to.have.property('board');",
+              "});",
+              "",
+              "pm.test('Turn changed to BLACK (AI turn)', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.turn).to.eql('BLACK');",
+              "});",
+              "",
+              "pm.test('Game still ongoing', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.gameResult).to.eql('ONGOING');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. AI Auto-Response (No Action Needed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"path\": [\n    {\"row\": 2, \"col\": 1},\n    {\"row\": 3, \"col\": 0}\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/move",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "move"]
+        },
+        "description": "This test is no longer needed since AI automatically responds. The AI will make its move after your RED move."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Info: AI automatically responds', function () {",
+              "    pm.test.skip('This request is informational - AI responds automatically');",
+              "});",
+              "",
+              "pm.test('Note: After your RED move, AI will automatically make its BLACK move', function () {",
+              "    pm.test.skip('AI plays BLACK and responds immediately');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Make Move - Capture",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"path\": [\n    {\"row\": 4, \"col\": 0},\n    {\"row\": 2, \"col\": 2}\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/move",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "move"]
+        },
+        "description": "Makes a capture move: (4,0) → (2,2), jumping over a BLACK piece at (3,1)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Capture move applied', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.move).to.include('x');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Make Move - Invalid (Test Error)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"path\": [\n    {\"row\": 5, \"col\": 1},\n    {\"row\": 4, \"col\": 1}\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/move",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "move"]
+        },
+        "description": "Attempts an invalid move: (5,1) → (4,1). This is not diagonal and should be rejected."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error message received', function () {",
+              "    const response = pm.response.text();",
+              "    pm.expect(response).to.not.be.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Get Board After Moves",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/games/{{gameId}}/board?format=json",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "{{gameId}}", "board"],
+          "query": [
+            {
+              "key": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "description": "Gets the board state after making several moves to see how the game has progressed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Board shows game progress', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.board).to.be.an('array');",
+              "    // Check that some pieces have moved from initial positions",
+              "    let hasMovedPieces = false;",
+              "    for (let row = 0; row < 8; row++) {",
+              "        for (let col = 0; col < 8; col++) {",
+              "            if (json.board[row][col] !== null) {",
+              "                // Check if piece is not in its initial position",
+              "                if ((row === 4 && col === 0) || (row === 3 && col === 0) || (row === 2 && col === 2)) {",
+              "                    hasMovedPieces = true;",
+              "                    break;",
+              "                }",
+              "            }",
+              "        }",
+              "        if (hasMovedPieces) break;",
+              "    }",
+              "    pm.expect(hasMovedPieces).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Test Non-existent Game",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/games/invalid-id-12345/board",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "games", "invalid-id-12345", "board"]
+        },
+        "description": "Tests error handling by requesting a non-existent game ID."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Error message received', function () {",
+              "    const response = pm.response.text();",
+              "    pm.expect(response).to.include('Game not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

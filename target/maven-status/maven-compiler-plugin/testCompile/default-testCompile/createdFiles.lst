@@ -1,1 +1,4 @@
+com/example/checkers/AIPlayerTests.class
 com/example/checkers/RulesEngineTests.class
+com/example/checkers/ModelTests.class
+com/example/checkers/GameTests.class

@@ -1,6 +1,6 @@
 # Checkers Engine - Spring Boot Project
 
-A complete checkers game implementation with AI opponent, built in Java 17 with Spring Boot 3.3.x.
+A complete checkers game implementation built in Java 17 with Spring Boot 3.3.x. Play checkers by making moves through the REST API and get the updated board state back.
 
 ## 🚀 Quick Start
 
@@ -29,13 +29,16 @@ The application will start on `http://localhost:8080`
 
 ```bash
 # Create a new game
-curl -X POST 'http://localhost:8080/api/games?aiDepth=4'
+curl -X POST 'http://localhost:8080/api/games'
 
 # View the board (ASCII format)
 curl 'http://localhost:8080/api/games/{GAME_ID}/board?format=ascii'
 
+# Get legal moves for current player
+curl 'http://localhost:8080/api/games/{GAME_ID}/moves'
+
 # Make a move
-curl -X POST 'http://localhost:8080/api/games/{GAME_ID}/move?aiColor=BLACK' \
+curl -X POST 'http://localhost:8080/api/games/{GAME_ID}/move' \
   -H 'Content-Type: application/json' \
   -d '{ "path": [{"row":5,"col":1},{"row":4,"col":0}] }'
 ```
@@ -53,22 +56,23 @@ curl -X POST 'http://localhost:8080/api/games/{GAME_ID}/move?aiColor=BLACK' \
 
 ### API Endpoints
 
-| Method | Endpoint                             | Description                                 |
-| ------ | ------------------------------------ | ------------------------------------------- |
-| `POST` | `/api/games?aiDepth=4`               | Create new game with AI difficulty 1-5      |
-| `GET`  | `/api/games/{id}/board?format=json`  | Get board state as JSON                     |
-| `GET`  | `/api/games/{id}/board?format=ascii` | Get board as readable text                  |
-| `POST` | `/api/games/{id}/move?aiColor=BLACK` | Make a move, optionally trigger AI response |
+| Method | Endpoint                             | Description                            |
+| ------ | ------------------------------------ | -------------------------------------- |
+| `POST` | `/api/games`                         | Create new game                        |
+| `GET`  | `/api/games/{id}/board?format=json`  | Get board state as JSON                |
+| `GET`  | `/api/games/{id}/board?format=ascii` | Get board as readable text             |
+| `GET`  | `/api/games/{id}/moves`              | Get all legal moves for current player |
+| `POST` | `/api/games/{id}/move`               | Make a move                            |
 
 ### Example Game Flow
 
 1. **Create Game**
 
    ```bash
-   curl -X POST 'http://localhost:8080/api/games?aiDepth=3'
+   curl -X POST 'http://localhost:8080/api/games'
    ```
 
-   Response: `{"gameId":"abc123","turn":"RED","ascii":"..."}`
+   Response: `{"gameId":"abc123","turn":"RED","ascii":"...","board":{...}}`
 
 2. **View Board**
 
@@ -76,15 +80,29 @@ curl -X POST 'http://localhost:8080/api/games/{GAME_ID}/move?aiColor=BLACK' \
    curl 'http://localhost:8080/api/games/abc123/board?format=ascii'
    ```
 
-3. **Make Move**
+3. **Get Legal Moves**
 
    ```bash
-   curl -X POST 'http://localhost:8080/api/games/abc123/move?aiColor=BLACK' \
+   curl 'http://localhost:8080/api/games/abc123/moves'
+   ```
+
+   Response: `{"legalMoves":[...],"turn":"RED","gameResult":"ONGOING"}`
+
+4. **Make Move**
+
+   ```bash
+   curl -X POST 'http://localhost:8080/api/games/abc123/move' \
      -H 'Content-Type: application/json' \
      -d '{ "path": [{"row":5,"col":1},{"row":4,"col":0}] }'
    ```
 
-4. **AI Responds** (if it's AI's turn)
+   Response: `{"move":"(5,1) - (4,0)","turn":"BLACK","gameResult":"ONGOING","ascii":"...","board":{...}}`
+
+5. **AI Automatically Responds**
+
+   The AI (playing BLACK) automatically makes its move after your move.
+   You'll see the updated board with the AI's response.
+   Your turn will be RED again for the next move.
 
 ## 🧪 Running Tests
 
@@ -109,7 +127,6 @@ mvn test jacoco:report
 ### Test Categories
 
 - **RulesEngineTests**: Game rules, move validation, captures
-- **AIPlayerTests**: AI algorithm, move selection, evaluation
 - **GameTests**: Game state management, turn handling
 - **ModelTests**: Data structures, piece behavior, board operations
 
@@ -127,8 +144,7 @@ src/
 │   │   ├── Game.java                    # Game state management
 │   │   └── GameService.java             # Game storage service
 │   ├── engine/                          # Game engine
-│   │   ├── RulesEngine.java             # Move validation & generation
-│   │   └── AIPlayer.java                # AI opponent (minimax)
+│   │   └── RulesEngine.java             # Move validation & generation
 │   ├── model/                           # Data models
 │   │   ├── Board.java                   # 8x8 game board
 │   │   ├── Piece.java                   # Game pieces (RED/BLACK, men/kings)
@@ -177,19 +193,28 @@ java -jar target/checkers-engine-0.0.1-SNAPSHOT.jar
 - ✅ **King promotion** on back rank
 - ✅ **Game end detection**
 
-### AI Opponent
-
-- ✅ **Minimax algorithm** with configurable depth
-- ✅ **Material evaluation** (men=1, kings=2.5)
-- ✅ **Mobility bonus** for strategic play
-- ✅ **Consistent move selection**
-
 ### API Design
 
 - ✅ **RESTful endpoints** for game management
 - ✅ **JSON request/response** formats
 - ✅ **ASCII board visualization** for debugging
 - ✅ **Move validation** and error handling
+- ✅ **Legal moves endpoint** to help players
+
+### Game Management
+
+- ✅ **Turn-based gameplay** (RED → BLACK → RED...)
+- ✅ **Game state persistence** in memory
+- ✅ **Move validation** against game rules
+- ✅ **Board state updates** after each move
+
+### AI Opponent
+
+- ✅ **Smart strategy** that prioritizes captures
+- ✅ **Safety-first approach** to avoid being captured
+- ✅ **Positional play** preferring safer board positions
+- ✅ **Automatic response** after each human move
+- ✅ **Interview-ready** simple but effective algorithm
 
 ## 🐛 Troubleshooting
 
@@ -246,11 +271,6 @@ logging.level.org.springframework.web=DEBUG
 
 - [American Checkers Rules](https://en.wikipedia.org/wiki/Checkers)
 - [Forced Capture Rule](https://www.checkers.com/rules)
-
-### AI Algorithms
-
-- [Minimax Algorithm](https://en.wikipedia.org/wiki/Minimax)
-- [Game Tree Search](https://en.wikipedia.org/wiki/Game_tree)
 
 ### Spring Boot
 

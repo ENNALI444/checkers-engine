@@ -1,7 +1,7 @@
 package com.example.checkers.core;
 
-import com.example.checkers.engine.AIPlayer;
 import com.example.checkers.engine.RulesEngine;
+import com.example.checkers.engine.AIPlayer;
 import com.example.checkers.model.*;
 
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /**
  * Represents a single checkers game.
- * Manages the game state, turns, and coordinates between players and AI.
+ * Manages the game state and turns without AI opponent.
  */
 public class Game {
 
@@ -32,14 +32,12 @@ public class Game {
     private GameResult result;
 
     /**
-     * Creates a new game with the specified AI difficulty.
-     * 
-     * @param aiDepth How many moves ahead the AI should look (3-5 is typical)
+     * Creates a new game with AI opponent.
      */
-    public Game(int aiDepth) {
+    public Game() {
         this.id = UUID.randomUUID().toString();
         this.rules = new RulesEngine();
-        this.ai = new AIPlayer(aiDepth);
+        this.ai = new AIPlayer();
         this.board = Board.initial();
         this.turn = Color.RED; // RED always goes first in checkers
         this.result = GameResult.ONGOING;
@@ -114,40 +112,11 @@ public class Game {
 
         // Check if the game has ended
         checkForGameEnd();
-    }
 
-    /**
-     * Makes an AI move if it's the AI's turn.
-     * 
-     * @param aiColor Which color the AI is playing
-     * @return The move the AI made, or null if it's not the AI's turn
-     */
-    public Move aiMoveIfTurn(Color aiColor) {
-        // Check if game is still ongoing
-        if (result != GameResult.ONGOING) {
-            return null;
+        // If it's now AI's turn and game is still ongoing, make AI move
+        if (result == GameResult.ONGOING && turn == Color.BLACK) {
+            makeAIMove();
         }
-
-        // Check if it's the AI's turn
-        if (turn != aiColor) {
-            return null;
-        }
-
-        // Get the AI's best move
-        Move aiMove = ai.chooseMove(board, aiColor);
-
-        if (aiMove != null) {
-            // Apply the AI's move
-            board = rules.apply(board, aiMove);
-
-            // Switch turns
-            turn = turn.opponent();
-
-            // Check if the game has ended
-            checkForGameEnd();
-        }
-
-        return aiMove;
     }
 
     /**
@@ -166,6 +135,30 @@ public class Game {
      */
     public String ascii() {
         return "Turn: " + turn + "\n" + board.toString();
+    }
+
+    /**
+     * Makes an AI move when it's the computer's turn.
+     * AI automatically plays for BLACK pieces.
+     */
+    private void makeAIMove() {
+        if (turn != Color.BLACK || result != GameResult.ONGOING) {
+            return; // Not AI's turn or game is over
+        }
+
+        // Get AI's move choice
+        Move aiMove = ai.chooseMove(board, Color.BLACK);
+
+        if (aiMove != null) {
+            // Apply the AI move
+            board = rules.apply(board, aiMove);
+
+            // Switch turns back to human player
+            turn = Color.RED;
+
+            // Check if game ended after AI move
+            checkForGameEnd();
+        }
     }
 
     /**

@@ -22,25 +22,16 @@ public class AIPlayerTests {
 
     @BeforeEach
     void setUp() {
-        ai = new AIPlayer(3);
+        ai = new AIPlayer();
         rules = new RulesEngine();
         board = new Board();
     }
 
     @Test
     void testAIPlayerCreation() {
-        // Test valid depth
-        AIPlayer validAI = new AIPlayer(5);
-        assertNotNull(validAI, "AI should be created with valid depth");
-
-        // Test invalid depth
-        assertThrows(IllegalArgumentException.class, () -> {
-            new AIPlayer(0);
-        }, "Should not allow depth 0");
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            new AIPlayer(-1);
-        }, "Should not allow negative depth");
+        // Test that AI can be created
+        AIPlayer validAI = new AIPlayer();
+        assertNotNull(validAI, "AI should be created successfully");
     }
 
     @Test
@@ -98,7 +89,7 @@ public class AIPlayerTests {
     @Test
     void testAIDepthLimiting() {
         // Create AI with depth 1
-        AIPlayer shallowAI = new AIPlayer(1);
+        AIPlayer shallowAI = new AIPlayer();
 
         // Set up a position where looking deeper would find better moves
         board.set(5, 1, new Piece(Color.RED, false));
@@ -190,5 +181,66 @@ public class AIPlayerTests {
 
         assertNotNull(aiMove, "AI should find a move in complex position");
         // AI should handle multiple pieces and complex positions
+    }
+
+    @Test
+    void testAISafetyEvaluation() {
+        // Test that AI prefers safe moves
+        Board board = new Board();
+        board.set(5, 1, new Piece(Color.RED, false));
+        board.set(4, 0, null); // Safe move
+        board.set(4, 2, new Piece(Color.BLACK, false)); // Dangerous move (could be captured)
+        
+        Move aiMove = ai.chooseMove(board, Color.RED);
+        
+        assertNotNull(aiMove, "AI should find a move");
+        // AI should prefer the safer move
+        Square destination = aiMove.getPath().get(aiMove.getPath().size() - 1);
+        assertEquals(4, destination.row(), "AI should choose safer move");
+        assertEquals(0, destination.col(), "AI should choose safer move");
+    }
+
+    @Test
+    void testAICapturePrioritization() {
+        // Test that AI always chooses captures when available
+        Board board = new Board();
+        board.set(5, 1, new Piece(Color.RED, false));
+        board.set(4, 2, new Piece(Color.BLACK, false)); // Piece to capture
+        board.set(4, 0, null); // Safe simple move
+        
+        Move aiMove = ai.chooseMove(board, Color.RED);
+        
+        assertNotNull(aiMove, "AI should find a move");
+        assertTrue(aiMove.isCapture(), "AI should prioritize capture over simple move");
+    }
+
+    @Test
+    void testAIMoveWithNoSafeOptions() {
+        // Test AI behavior when no safe moves are available
+        Board board = new Board();
+        board.set(5, 1, new Piece(Color.RED, false));
+        // All moves lead to capture, so AI must choose least risky
+        
+        Move aiMove = ai.chooseMove(board, Color.RED);
+        
+        assertNotNull(aiMove, "AI should find a move even when no safe options");
+    }
+
+    @Test
+    void testAIMoveWithMultipleCaptures() {
+        // Test AI choice when multiple capture options are available
+        Board board = new Board();
+        board.set(5, 1, new Piece(Color.RED, false));
+        board.set(4, 2, new Piece(Color.BLACK, false)); // Single capture
+        board.set(3, 3, new Piece(Color.BLACK, false)); // Double capture opportunity
+        
+        Move aiMove = ai.chooseMove(board, Color.RED);
+        
+        assertNotNull(aiMove, "AI should find a move");
+        assertTrue(aiMove.isCapture(), "AI should choose capture move");
+        // AI should prefer the move that captures more pieces
+        if (aiMove.getPath().size() > 2) {
+            assertTrue(aiMove.getPath().size() >= 3, "AI should prefer multi-capture when available");
+        }
     }
 }

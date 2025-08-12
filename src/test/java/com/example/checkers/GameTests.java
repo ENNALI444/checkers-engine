@@ -1,6 +1,7 @@
 package com.example.checkers;
 
 import com.example.checkers.core.Game;
+import com.example.checkers.engine.RulesEngine;
 import com.example.checkers.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,17 +12,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for the Game class.
- * Verifies game state management, move validation, and AI integration.
+ * Verifies game state management and move validation.
  */
 public class GameTests {
 
     private Game game;
-    private Board board;
 
     @BeforeEach
     void setUp() {
-        game = new Game(3);
-        board = new Board();
+        game = new Game();
     }
 
     @Test
@@ -81,17 +80,18 @@ public class GameTests {
         customBoard.set(5, 2, new Piece(Color.RED, false));
         customBoard.set(4, 3, new Piece(Color.BLACK, false));
 
-        // Create a new game with custom board
-        Game customGame = new Game(3);
-        // Note: This test would need a way to set custom board state
+        // Create a new game and manually set the board
+        Game customGame = new Game();
+        // We'll test this with the actual game logic instead
 
-        // Test that simple moves are rejected when captures are available
-        Move simpleMove = new Move(List.of(new Square(5, 1), new Square(4, 0)));
+        // Test that the game enforces forced captures through the rules engine
+        RulesEngine rules = new RulesEngine();
+        List<Move> legalMoves = rules.legalMoves(customBoard, Color.RED);
 
-        // This should fail because captures are forced
-        assertThrows(IllegalArgumentException.class, () -> {
-            customGame.makeMove(simpleMove);
-        }, "Simple moves should be rejected when captures are available");
+        // Should only have capture moves available
+        assertFalse(legalMoves.isEmpty(), "Should have legal moves");
+        assertTrue(legalMoves.stream().allMatch(Move::isCapture),
+                "All legal moves should be captures when captures are available");
     }
 
     @Test
@@ -106,34 +106,6 @@ public class GameTests {
         Move move1 = new Move(List.of(new Square(5, 1), new Square(4, 0)));
         game.makeMove(move1);
         assertEquals(GameResult.ONGOING, game.getResult(), "Game should still be ongoing after move");
-    }
-
-    @Test
-    void testAIMoveIntegration() {
-        // Test that AI makes moves when it's AI's turn
-        Color aiColor = Color.BLACK;
-
-        // Make a move for RED (human player)
-        Move humanMove = new Move(List.of(new Square(5, 1), new Square(4, 0)));
-        game.makeMove(humanMove);
-
-        // Now it's BLACK's turn, so AI should move
-        Move aiMove = game.aiMoveIfTurn(aiColor);
-
-        assertNotNull(aiMove, "AI should make a move when it's AI's turn");
-        assertEquals(Color.RED, game.getTurn(), "Turn should switch back to RED after AI move");
-    }
-
-    @Test
-    void testAINoMoveWhenNotAITurn() {
-        // Test that AI doesn't move when it's not AI's turn
-        Color aiColor = Color.BLACK;
-
-        // RED's turn, AI shouldn't move
-        Move aiMove = game.aiMoveIfTurn(aiColor);
-
-        assertNull(aiMove, "AI should not move when it's not AI's turn");
-        assertEquals(Color.RED, game.getTurn(), "Turn should remain RED");
     }
 
     @Test
@@ -190,30 +162,69 @@ public class GameTests {
 
         assertNotNull(ascii, "ASCII representation should not be null");
         assertTrue(ascii.contains("Turn: RED"), "ASCII should show current turn");
-        assertTrue(ascii.contains("."), "ASCII should show board representation");
+        assertTrue(ascii.contains("🔴"), "ASCII should show RED pieces");
+        assertTrue(ascii.contains("⚫"), "ASCII should show BLACK pieces");
+        assertTrue(ascii.contains("*"), "ASCII should show non-playable spaces");
     }
 
     @Test
     void testGameIdUniqueness() {
         // Test that different games have different IDs
-        Game game1 = new Game(3);
-        Game game2 = new Game(3);
+        Game game1 = new Game();
+        Game game2 = new Game();
 
         assertNotEquals(game1.getId(), game2.getId(), "Different games should have different IDs");
     }
 
     @Test
-    void testGameAIDepthConfiguration() {
-        // Test that AI depth is properly configured
-        Game shallowGame = new Game(1);
-        Game deepGame = new Game(5);
+    void testAIMoveIntegration() {
+        // Test that AI automatically makes a move after human move
+        Move humanMove = new Move(List.of(new Square(5, 1), new Square(4, 0)));
+        game.makeMove(humanMove);
+        
+        // AI should have made a move, turn should be RED again
+        assertEquals(Color.RED, game.getTurn(), "Turn should be RED after AI move");
+        assertEquals(GameResult.ONGOING, game.getResult(), "Game should still be ongoing");
+        
+        // Board should have changed from AI move
+        Board boardAfterAIMove = game.getBoard();
+        assertNotNull(boardAfterAIMove, "Board should exist after AI move");
+    }
 
-        // Both games should be created successfully
-        assertNotNull(shallowGame, "Game with depth 1 should be created");
-        assertNotNull(deepGame, "Game with depth 5 should be created");
 
-        // Both should have legal moves available
-        assertFalse(shallowGame.legalMoves().isEmpty(), "Shallow game should have legal moves");
-        assertFalse(deepGame.legalMoves().isEmpty(), "Deep game should have legal moves");
+
+    @Test
+    void testGameStateConsistency() {
+        // Test that game state remains consistent
+        String initialAscii = game.ascii();
+        Board initialBoard = game.getBoard();
+        Color initialTurn = game.getTurn();
+        
+        // Make a move
+        Move move = new Move(List.of(new Square(5, 1), new Square(4, 0)));
+        game.makeMove(move);
+        
+        // Verify state changed
+        assertNotEquals(initialTurn, game.getTurn(), "Turn should change after move");
+        assertNotSame(initialBoard, game.getBoard(), "Board should be new instance");
+        
+        // Verify new state is valid
+        assertNotNull(game.getBoard(), "Board should not be null");
+        assertNotNull(game.getTurn(), "Turn should not be null");
+        assertNotNull(game.getResult(), "Result should not be null");
+    }
+
+    @Test
+    void testGameWithMultipleMoves() {
+        // Test game flow with multiple moves
+        Move move1 = new Move(List.of(new Square(5, 1), new Square(4, 0)));
+        game.makeMove(move1);
+        assertEquals(Color.RED, game.getTurn(), "Turn should be RED after AI move");
+        
+        Move move2 = new Move(List.of(new Square(5, 3), new Square(4, 2)));
+        game.makeMove(move2);
+        assertEquals(Color.RED, game.getTurn(), "Turn should be RED after AI move");
+        
+        assertEquals(GameResult.ONGOING, game.getResult(), "Game should still be ongoing");
     }
 }

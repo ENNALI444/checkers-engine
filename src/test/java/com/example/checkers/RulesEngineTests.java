@@ -189,7 +189,7 @@ public class RulesEngineTests {
     void testAIPlayerChoosesLegalMove() {
         // Test that AI always chooses a legal move
         Board initialBoard = Board.initial();
-        AIPlayer ai = new AIPlayer(3);
+        AIPlayer ai = new AIPlayer();
 
         Move aiMove = ai.chooseMove(initialBoard, Color.RED);
 

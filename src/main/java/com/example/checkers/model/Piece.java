@@ -23,7 +23,8 @@ public final class Piece {
     }
 
     public Piece makeKing() {
-        if (king) return this;
+        if (king)
+            return this;
         return new Piece(color, true);
     }
 
@@ -45,10 +46,8 @@ public final class Piece {
     @Override
     public String toString() {
         if (color == Color.RED) {
-            return king ? "rk" : "r";
+            return king ? "👑" : "🔴"; // Red piece: crown for king, circle for regular
         }
-        return king ? "bk" : "b";
+        return king ? "👑" : "⚫"; // Black piece: crown for king, circle for regular
     }
 }
-
-

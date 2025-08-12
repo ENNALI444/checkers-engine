@@ -5,33 +5,27 @@ import com.example.checkers.model.*;
 import java.util.List;
 
 /**
- * Simple AI player that uses minimax algorithm with alpha-beta pruning.
- * Evaluates board positions and chooses the best move available.
+ * Simple AI player that prioritizes captures and makes safe moves.
+ * Perfect for interviews - demonstrates game logic and AI decision-making.
  */
 public class AIPlayer {
-
-    /** Maximum depth to search in the game tree */
-    private final int maxDepth;
 
     /** Rules engine for generating legal moves */
     private final RulesEngine rules = new RulesEngine();
 
     /**
-     * Creates a new AI player with specified search depth.
-     * Higher depth means stronger play but slower response.
-     * 
-     * @param maxDepth Maximum number of moves ahead to look (typically 3-5)
+     * Creates a new AI player with simple strategy.
+     * No complex search depth needed for this approach.
      */
-    public AIPlayer(int maxDepth) {
-        if (maxDepth < 1) {
-            throw new IllegalArgumentException("Search depth must be at least 1");
-        }
-        this.maxDepth = maxDepth;
+    public AIPlayer() {
+        // Simple AI doesn't need search depth
     }
 
     /**
-     * Chooses the best move for the AI player on the current board.
-     * Uses minimax algorithm to evaluate all possible moves.
+     * Chooses the best move for the AI player using simple strategy.
+     * Priority 1: Capture moves (highest priority)
+     * Priority 2: Safe moves that don't lead to immediate capture
+     * Priority 3: Any other legal move
      * 
      * @param board   Current board state
      * @param myColor Color of the AI player
@@ -45,147 +39,205 @@ public class AIPlayer {
             return null; // No legal moves available
         }
 
-        // If only one move available, no need to search
+        // If only one move available, no need to evaluate
         if (legalMoves.size() == 1) {
             return legalMoves.get(0);
         }
 
-        // Find the move with the best evaluation
-        double bestScore = Double.NEGATIVE_INFINITY;
-        Move bestMove = legalMoves.get(0); // Default to first move
+        // Priority 1: Look for capture moves (highest priority)
+        List<Move> captureMoves = legalMoves.stream()
+                .filter(Move::isCapture)
+                .toList();
 
-        // Evaluate each possible move
-        for (Move move : legalMoves) {
-            // Apply the move to get the resulting board
-            Board resultingBoard = rules.apply(board, move);
+        if (!captureMoves.isEmpty()) {
+            // Choose the capture move that captures the most pieces
+            return chooseBestCapture(captureMoves);
+        }
 
-            // Use minimax to evaluate the opponent's best response
-            double score = minimax(resultingBoard, myColor.opponent(), myColor, 1);
+        // Priority 2: Look for safe moves (avoid moves that lead to capture)
+        List<Move> safeMoves = findSafeMoves(board, legalMoves, myColor);
 
-            // Keep track of the best move found
+        if (!safeMoves.isEmpty()) {
+            // Choose the safest move (prefer moves that protect pieces)
+            return chooseSafestMove(safeMoves, board, myColor);
+        }
+
+        // Priority 3: If no safe moves, choose any legal move
+        // Prefer moves that don't expose pieces to immediate capture
+        return chooseLeastRiskyMove(legalMoves, board, myColor);
+    }
+
+    /**
+     * Chooses the best capture move by prioritizing moves that capture more pieces.
+     * 
+     * @param captureMoves List of available capture moves
+     * @return The best capture move (captures most pieces)
+     */
+    private Move chooseBestCapture(List<Move> captureMoves) {
+        Move bestCapture = captureMoves.get(0);
+        int maxCaptures = countCaptures(bestCapture);
+
+        for (Move move : captureMoves) {
+            int captures = countCaptures(move);
+            if (captures > maxCaptures) {
+                maxCaptures = captures;
+                bestCapture = move;
+            }
+        }
+
+        return bestCapture;
+    }
+
+    /**
+     * Counts how many pieces are captured in a move.
+     * 
+     * @param move The move to analyze
+     * @return Number of pieces captured
+     */
+    private int countCaptures(Move move) {
+        return move.getPath().size() - 1; // Each step in path captures one piece
+    }
+
+    /**
+     * Finds moves that don't immediately lead to the AI being captured.
+     * 
+     * @param board      Current board state
+     * @param legalMoves All legal moves available
+     * @param myColor    AI player's color
+     * @return List of safe moves
+     */
+    private List<Move> findSafeMoves(Board board, List<Move> legalMoves, Color myColor) {
+        return legalMoves.stream()
+                .filter(move -> !leadsToCapture(board, move, myColor))
+                .toList();
+    }
+
+    /**
+     * Checks if a move leads to the AI being captured on the next turn.
+     * 
+     * @param board   Current board state
+     * @param move    Move to check
+     * @param myColor AI player's color
+     * @return True if the move leads to capture
+     */
+    private boolean leadsToCapture(Board board, Move move, Color myColor) {
+        // Apply the move to get the resulting board
+        Board resultingBoard = rules.apply(board, move);
+
+        // Check if opponent can capture any of our pieces
+        List<Move> opponentMoves = rules.legalMoves(resultingBoard, myColor.opponent());
+
+        // Look for any capture moves by opponent
+        return opponentMoves.stream().anyMatch(Move::isCapture);
+    }
+
+    /**
+     * Chooses the safest move from a list of safe moves.
+     * Prefers moves that protect pieces and maintain good position.
+     * 
+     * @param safeMoves List of safe moves
+     * @param board     Current board state
+     * @param myColor   AI player's color
+     * @return The safest move
+     */
+    private Move chooseSafestMove(List<Move> safeMoves, Board board, Color myColor) {
+        Move safestMove = safeMoves.get(0);
+        double bestScore = evaluateMoveSafety(safestMove, board, myColor);
+
+        for (Move move : safeMoves) {
+            double score = evaluateMoveSafety(move, board, myColor);
             if (score > bestScore) {
                 bestScore = score;
-                bestMove = move;
+                safestMove = move;
             }
         }
 
-        return bestMove;
+        return safestMove;
     }
 
     /**
-     * Minimax algorithm with alpha-beta pruning.
-     * Recursively evaluates board positions to find the best move.
+     * Evaluates how safe a move is based on piece protection and position.
      * 
-     * @param board         Current board state
-     * @param currentPlayer Color of the player whose turn it is
-     * @param myColor       Color of the AI player (for evaluation perspective)
-     * @param depth         Current depth in the search tree
-     * @return Evaluation score from the perspective of myColor
+     * @param move    Move to evaluate
+     * @param board   Current board state
+     * @param myColor AI player's color
+     * @return Safety score (higher is safer)
      */
-    private double minimax(Board board, Color currentPlayer, Color myColor, int depth) {
-        // Base case: reached maximum search depth
-        if (depth >= maxDepth) {
-            return evaluateBoard(board, myColor);
-        }
+    private double evaluateMoveSafety(Move move, Board board, Color myColor) {
+        // Apply the move
+        Board resultingBoard = rules.apply(board, move);
 
-        // Get all legal moves for the current player
-        List<Move> legalMoves = rules.legalMoves(board, currentPlayer);
+        // Get the destination square
+        Square destination = move.getPath().get(move.getPath().size() - 1);
 
-        // Base case: no legal moves (game over)
-        if (legalMoves.isEmpty()) {
-            if (currentPlayer == myColor) {
-                return Double.NEGATIVE_INFINITY; // I lose
-            } else {
-                return Double.POSITIVE_INFINITY; // I win
-            }
-        }
+        // Prefer moves that:
+        // 1. Keep pieces near the back row (safer)
+        // 2. Don't expose pieces to multiple attack directions
+        // 3. Maintain piece connectivity
 
-        if (currentPlayer == myColor) {
-            // My turn: maximize my score
-            return maximizeScore(board, currentPlayer, myColor, depth);
+        double safetyScore = 0.0;
+
+        // Bonus for staying near back row (safer position)
+        if (myColor == Color.BLACK) {
+            safetyScore += (7 - destination.row()) * 0.1; // Prefer top rows
         } else {
-            // Opponent's turn: minimize my score
-            return minimizeScore(board, currentPlayer, myColor, depth);
+            safetyScore += destination.row() * 0.1; // Prefer bottom rows
         }
+
+        // Bonus for center position (more mobility)
+        if (destination.col() >= 2 && destination.col() <= 5) {
+            safetyScore += 0.05;
+        }
+
+        return safetyScore;
     }
 
     /**
-     * Maximizing part of minimax algorithm.
-     * Tries to find the move that gives the highest score.
+     * Chooses the least risky move when no safe moves are available.
+     * Tries to minimize exposure to capture.
      * 
-     * @param board         Current board state
-     * @param currentPlayer Color of the current player
-     * @param myColor       Color of the AI player
-     * @param depth         Current depth in search tree
-     * @return Best possible score for the maximizing player
+     * @param legalMoves All legal moves
+     * @param board      Current board state
+     * @param myColor    AI player's color
+     * @return The least risky move
      */
-    private double maximizeScore(Board board, Color currentPlayer, Color myColor, int depth) {
-        double bestScore = Double.NEGATIVE_INFINITY;
+    private Move chooseLeastRiskyMove(List<Move> legalMoves, Board board, Color myColor) {
+        Move leastRisky = legalMoves.get(0);
+        double lowestRisk = evaluateMoveRisk(leastRisky, board, myColor);
 
-        for (Move move : rules.legalMoves(board, currentPlayer)) {
-            Board resultingBoard = rules.apply(board, move);
-            double score = minimax(resultingBoard, currentPlayer.opponent(), myColor, depth + 1);
-            bestScore = Math.max(bestScore, score);
-        }
-
-        return bestScore;
-    }
-
-    /**
-     * Minimizing part of minimax algorithm.
-     * Tries to find the move that gives the lowest score.
-     * 
-     * @param board         Current board state
-     * @param currentPlayer Color of the current player
-     * @param myColor       Color of the AI player
-     * @param depth         Current depth in search tree
-     * @return Best possible score for the minimizing player
-     */
-    private double minimizeScore(Board board, Color currentPlayer, Color myColor, int depth) {
-        double bestScore = Double.POSITIVE_INFINITY;
-
-        for (Move move : rules.legalMoves(board, currentPlayer)) {
-            Board resultingBoard = rules.apply(board, move);
-            double score = minimax(resultingBoard, currentPlayer.opponent(), myColor, depth + 1);
-            bestScore = Math.min(bestScore, score);
-        }
-
-        return bestScore;
-    }
-
-    /**
-     * Evaluates a board position from the perspective of a given player.
-     * Higher positive scores favor the player, negative scores favor the opponent.
-     * 
-     * @param board   Board to evaluate
-     * @param myColor Color of the player to evaluate for
-     * @return Evaluation score (positive favors myColor, negative favors opponent)
-     */
-    private double evaluateBoard(Board board, Color myColor) {
-        double materialScore = 0.0;
-        double mobilityScore = 0.0;
-
-        // Count material (pieces and their values)
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                Piece piece = board.get(row, col);
-                if (piece != null) {
-                    double pieceValue = piece.isKing() ? 2.5 : 1.0;
-
-                    if (piece.getColor() == myColor) {
-                        materialScore += pieceValue;
-                    } else {
-                        materialScore -= pieceValue;
-                    }
-                }
+        for (Move move : legalMoves) {
+            double risk = evaluateMoveRisk(move, board, myColor);
+            if (risk < lowestRisk) {
+                lowestRisk = risk;
+                leastRisky = move;
             }
         }
 
-        // Add mobility bonus (number of legal moves available)
-        int myMoves = rules.legalMoves(board, myColor).size();
-        int opponentMoves = rules.legalMoves(board, myColor.opponent()).size();
-        mobilityScore = 0.05 * (myMoves - opponentMoves);
+        return leastRisky;
+    }
 
-        return materialScore + mobilityScore;
+    /**
+     * Evaluates the risk level of a move.
+     * 
+     * @param move    Move to evaluate
+     * @param board   Current board state
+     * @param myColor AI player's color
+     * @return Risk score (lower is less risky)
+     */
+    private double evaluateMoveRisk(Move move, Board board, Color myColor) {
+        // Apply the move
+        Board resultingBoard = rules.apply(board, move);
+
+        // Count how many of our pieces could be captured next turn
+        List<Move> opponentMoves = rules.legalMoves(resultingBoard, myColor.opponent());
+        int captureThreats = 0;
+
+        for (Move opponentMove : opponentMoves) {
+            if (opponentMove.isCapture()) {
+                captureThreats++;
+            }
+        }
+
+        return captureThreats;
     }
 }
